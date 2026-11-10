@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>{{TITLE}}</title>
+<style>
+:root{
+  --text:#eef1fa; --sub:rgba(225,232,250,.58); --line:rgba(255,255,255,.08);
+  --panel:rgba(22,26,44,.55); --panel-stroke:rgba(255,255,255,.14); --row-hover:rgba(255,255,255,.04);
+  --bg:#0d1020; --track:rgba(255,255,255,.08);
+  --ok:#21ba45; --warn:#fbbd08; --bad:#db2828; --rx:#2ecc71; --tx:#f2994a; --accent:#5e8bff;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --text:#1b1f2e; --sub:rgba(27,31,46,.55); --line:rgba(20,30,60,.08);
+    --panel:rgba(255,255,255,.62); --panel-stroke:rgba(255,255,255,.9); --row-hover:rgba(30,60,140,.04);
+    --bg:#eef1f8; --track:rgba(20,30,60,.08); --rx:#16a34a; --tx:#ea7a12; --accent:#2f6bff;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",sans-serif;
+  color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;min-height:100vh;font-size:14px}
+/* subtle colour field behind the glass, much calmer than before */
+.bg{position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(60vw 50vh at 10% 0%,rgba(94,92,230,.28),transparent 70%),
+             radial-gradient(50vw 45vh at 95% 15%,rgba(48,176,199,.20),transparent 70%),
+             radial-gradient(60vw 50vh at 50% 110%,rgba(255,55,95,.14),transparent 70%)}
+
+/* ---- header (Hotaru-style title bar) ---- */
+.top{max-width:1360px;margin:0 auto;padding:28px 20px 18px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.top h1{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.top p{color:var(--sub);font-size:13px;margin-top:4px}
+.sum{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;
+  background:var(--panel);border:1px solid var(--panel-stroke);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%)}
+.chip em{font-style:normal;color:var(--sub);font-weight:500;margin-right:4px}
+
+/* ---- glass panel holding the table ---- */
+.panel{width:calc(100% - 40px);max-width:1320px;margin:0 auto 30px;border-radius:20px;overflow:hidden;
+  background:var(--panel);border:1px solid var(--panel-stroke);
+  -webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
+  box-shadow:0 18px 50px -24px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12)}
+.wrap{padding:0 20px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+thead th{font-size:12px;font-weight:600;color:var(--sub);text-align:left;padding:13px 10px;border-bottom:1px solid var(--line);white-space:nowrap;
+  background:rgba(255,255,255,.025)}
+tbody td{padding:11px 10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+tbody tr.row{cursor:pointer;transition:background .15s}
+tbody tr.row:hover{background:var(--row-hover)}
+tbody tr.row.off td{color:var(--sub)}
+th.c,td.c{text-align:center}
+.st{display:inline-block;padding:3px 9px;border-radius:6px;font-size:11.5px;font-weight:700;color:#fff;background:var(--ok)}
+.off .st{background:var(--bad)}
+.name{font-weight:600}
+.flag{font-size:16px;line-height:1}
+.dual{display:flex;flex-direction:column;gap:1px;font-size:12.5px}
+.dual .r{color:var(--rx)} .dual .t{color:var(--tx)}
+.dual span::before{display:inline-block;width:13px;opacity:.85}
+.dual .r::before{content:"↓"} .dual .t::before{content:"↑"}
+.dual b{color:var(--text);font-weight:500}
+
+/* progress bar with % inside, colour by threshold (Hotaru semantics) */
+.bar{position:relative;width:96px;height:20px;border-radius:6px;background:var(--track);overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:6px;background:var(--ok);transition:width .6s cubic-bezier(.2,.8,.2,1),background .3s;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.bar i.w{background:var(--warn)} .bar i.b{background:var(--bad)}
+.bar span{position:relative;display:block;text-align:center;line-height:20px;font-size:11.5px;font-weight:700;color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.45)}
+@media (prefers-color-scheme: light){.bar span{color:#1b1f2e;text-shadow:0 0 3px rgba(255,255,255,.9)}}
+
+/* expandable detail row */
+tr.det td{padding:0;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02)}
+tr.det .in{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) 2fr;gap:6px 24px;padding:14px 20px 16px;font-size:12.5px;color:var(--sub)}
+tr.det .in div b{color:var(--text);font-weight:600;margin-left:6px}
+tr.det canvas{grid-row:span 3;grid-column:5;width:100%;height:72px}
+tr.det[hidden]{display:none}
+
+/* ---- overview cards (Hotaru keeps cards above the list) ---- */
+.cards{width:calc(100% - 40px);max-width:1320px;margin:0 auto 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.card{position:relative;padding:14px 16px 13px;border-radius:20px;cursor:pointer;background:var(--panel);border:1px solid var(--panel-stroke);
+  -webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
+  box-shadow:0 14px 36px -22px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.14);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.card::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.14),transparent 40%)}
+.card:hover{transform:translateY(-2px)}
+.card.off{opacity:.55}
+.ch{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ch .cn{font-weight:650;font-size:14.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.card.off .dot{background:var(--bad);box-shadow:none}
+.ch .cu{font-size:11.5px;color:var(--sub);font-variant-numeric:tabular-nums}
+.rings{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px}
+.rg{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--sub)}
+.rg .ring{position:relative;width:54px;height:54px}
+.rg svg{transform:rotate(-90deg)}
+.rg circle{fill:none;stroke-width:7;stroke-linecap:round}
+.rg .t{stroke:var(--track)}
+.rg .v{stroke:var(--ok);transition:stroke-dashoffset .7s cubic-bezier(.2,.8,.2,1),stroke .3s}
+.rg .v.w{stroke:var(--warn)} .rg .v.b{stroke:var(--bad)}
+.rg b{position:absolute;inset:0;display:grid;place-items:center;font-size:12.5px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+.cs{display:flex;justify-content:space-between;font-size:12px;font-variant-numeric:tabular-nums;padding-top:8px;border-top:1px solid var(--line)}
+.cs .r{color:var(--rx)} .cs .t{color:var(--tx)} .cs b{color:var(--text);font-weight:600;margin-left:3px}
+tr.row.flash{background:rgba(94,139,255,.16)}
+footer{text-align:center;color:var(--sub);font-size:12px;padding:0 0 30px}
+.empty{padding:40px;text-align:center;color:var(--sub)}
+
+/* responsive: drop secondary columns like Hotaru does on mobile */
+@media (max-width:1100px){.h-load,.h-up{display:none}}
+@media (max-width:860px){.h-traf,.h-disk{display:none} .bar{width:70px}}
+@media (max-width:620px){.cards{width:calc(100% - 16px);grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card{padding:11px 10px}.rg .ring{width:40px;height:40px}.rg b{font-size:10.5px}.ch .cu{display:none}.cs{flex-direction:column;gap:2px;font-size:11px}td.name{max-width:110px;overflow:hidden;text-overflow:ellipsis}.panel{width:calc(100% - 16px);border-radius:16px}.top{padding:22px 12px 14px} .h-loc,.h-mem{display:none} tbody td,thead th{padding:10px 6px}.wrap{padding:0 8px}
+  tr.det .in{grid-template-columns:1fr 1fr} tr.det canvas{grid-column:1/-1;grid-row:auto}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="top">
+  <div><h1>{{TITLE}}</h1><p>Live server status · refreshes every 3s</p></div>
+  <div class="sum">
+    <div class="chip"><em>Online</em><span id="sOn">–</span></div>
+    <div class="chip"><em>↓</em><span id="sRx">–</span></div>
+    <div class="chip"><em>↑</em><span id="sTx">–</span></div>
+    <div class="chip"><em>This period</em><span id="sTraf">–</span></div>
+  </div>
+</div>
+
+<section class="cards" id="cards"></section>
+
+<div class="panel"><div class="wrap">
+<table>
+  <thead><tr>
+    <th class="c">Status</th><th>Node</th><th class="c h-loc">Location</th><th class="h-up">Uptime</th><th class="h-load">Load</th>
+    <th>Network ↓|↑</th><th class="h-traf">Traffic ↓|↑</th>
+    <th class="c">CPU</th><th class="c h-mem">RAM</th><th class="c h-disk">Disk</th>
+  </tr></thead>
+  <tbody id="tb"><tr><td colspan="10" class="empty">Loading…</td></tr></tbody>
+</table>
+</div></div>
+<footer>Last updated <span id="upd">–</span></footer>
+
+<script>
+"use strict";
+const $ = (s, e = document) => e.querySelector(s);
+const rows = new Map(), series = new Map(), open = new Set();
+
+function bytes(n, d = 2) {
+  if (!n) return "0 B"; const u = ["B","KB","MB","GB","TB","PB"]; let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; } return n.toFixed(i ? d : 0) + " " + u[i];
+}
+function rate(n) {
+  let b = (n || 0) * 8; const u = ["bps","Kbps","Mbps","Gbps"]; let i = 0;
+  while (b >= 1000 && i < u.length - 1) { b /= 1000; i++; } return b.toFixed(i ? 1 : 0) + " " + u[i];
+}
+function dur(s) {
+  s = Math.floor(s || 0); const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  return d ? `${d} days` : h ? `${h} hours` : `${m} min`;
+}
+function flag(cc) {
+  return /^[A-Z]{2}$/.test(cc || "") ? String.fromCodePoint(...[...cc].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)) : "🏳️";
+}
+function bar(pct) {
+  pct = Math.max(0, Math.min(100, pct || 0));
+  return [pct, pct >= 90 ? "b" : pct >= 70 ? "w" : ""];
+}
+function setBar(td, pct, online) {
+  const [p, cls] = bar(pct), i = $("i", td);
+  i.style.width = (online ? p : 0) + "%"; i.className = cls;
+  $("span", td).textContent = online ? Math.round(p) + "%" : "–";
+}
+
+const RC = 2 * Math.PI * 22;
+function ringHTML(label) {
+  return `<div class="rg"><div class="ring"><svg width="100%" height="100%" viewBox="0 0 54 54"><circle class="t" cx="27" cy="27" r="22"/>
+    <circle class="v" cx="27" cy="27" r="22" stroke-dasharray="${RC}" stroke-dashoffset="${RC}"/></svg><b>–</b></div>${label}</div>`;
+}
+function makeCard(n) {
+  const c = document.createElement("div"); c.className = "card";
+  c.innerHTML = `<div class="ch"><span class="flag"></span><span class="cn"></span><span class="cu"></span><span class="dot"></span></div>
+    <div class="rings">${ringHTML("CPU")}${ringHTML("RAM")}${ringHTML("Disk")}</div>
+    <div class="cs"><span class="r">↓<b class="cr">–</b></span><span class="t">↑<b class="ct">–</b></span></div>`;
+  $(".cn", c).textContent = n.name; $(".flag", c).textContent = flag(n.region);
+  c.addEventListener("click", () => {          // jump to the row and open its details
+    const r = rows.get(n.id); if (!r) return;
+    if (r.det.hidden) r.tr.click();
+    r.tr.scrollIntoView({ behavior: "smooth", block: "center" });
+    r.tr.classList.add("flash"); setTimeout(() => r.tr.classList.remove("flash"), 1200);
+  });
+  $("#cards").appendChild(c); return c;
+}
+function setRing(rg, pct, live) {
+  const [p, cls] = bar(pct), v = $(".v", rg);
+  v.style.strokeDashoffset = RC * (1 - (live ? p : 0) / 100); v.setAttribute("class", "v " + cls);
+  $("b", rg).textContent = live ? Math.round(p) + "%" : "–";
+}
+const cardsMap = new Map();
+
+function makeRow(n) {
+  const tr = document.createElement("tr"); tr.className = "row";
+  tr.innerHTML = `<td class="c"><span class="st"></span></td><td class="name"></td><td class="c h-loc flag"></td>
+    <td class="h-up"></td><td class="h-load"></td>
+    <td><div class="dual"><span class="r"><b class="nr"></b></span><span class="t"><b class="nt"></b></span></div></td>
+    <td class="h-traf"><div class="dual"><span class="r"><b class="pr"></b></span><span class="t"><b class="pt"></b></span></div></td>
+    <td class="c b-cpu"><div class="bar"><i></i><span></span></div></td>
+    <td class="c h-mem b-mem"><div class="bar"><i></i><span></span></div></td>
+    <td class="c h-disk b-disk"><div class="bar"><i></i><span></span></div></td>`;
+  $(".name", tr).textContent = n.name;          // textContent: names never parsed as HTML
+  $(".flag", tr).textContent = flag(n.region);
+  const det = document.createElement("tr"); det.className = "det"; det.hidden = true;
+  det.innerHTML = `<td colspan="10"><div class="in">
+    <div>CPU cores<b class="d-core"></b></div><div>RAM<b class="d-mem"></b></div><div>Disk<b class="d-disk"></b></div><div>Swap<b class="d-swap"></b></div>
+    <canvas></canvas>
+    <div>Uptime<b class="d-up"></b></div><div>Load<b class="d-load"></b></div><div>Period start<b class="d-ps"></b></div><div></div>
+    <div>All-time ↓<b class="d-tr"></b></div><div>All-time ↑<b class="d-tt"></b></div><div>Period total<b class="d-pall"></b></div><div></div>
+  </div></td>`;
+  tr.addEventListener("click", () => {
+    det.hidden = !det.hidden; det.hidden ? open.delete(n.id) : open.add(n.id);
+    if (!det.hidden) loadHistory(n.id);
+  });
+  $("#tb").append(tr, det);
+  rows.set(n.id, { tr, det });
+}
+function loadHistory(id) {
+  if (series.has(id)) return draw(id);
+  fetch("api/history?id=" + id).then(r => r.json()).then(h => { series.set(id, h.map(p => [p[3], p[4]]).slice(-240)); draw(id); }).catch(() => {});
+}
+function draw(id) {
+  const r = rows.get(id); if (!r || r.det.hidden) return;
+  const cv = $("canvas", r.det), dpr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w * dpr; cv.height = h * dpr; const x = cv.getContext("2d"); x.scale(dpr, dpr);
+  const s = series.get(id) || []; if (s.length < 2) return;
+  const max = Math.max(1, ...s.map(p => Math.max(p[0], p[1]))), css = getComputedStyle(document.documentElement);
+  for (const [k, v] of [[0, "--rx"], [1, "--tx"]]) {
+    const col = css.getPropertyValue(v).trim(); x.beginPath();
+    s.forEach((p, i) => { const px = i / (s.length - 1) * w, py = h - 2 - p[k] / max * (h - 6); i ? x.lineTo(px, py) : x.moveTo(px, py); });
+    x.strokeStyle = col; x.lineWidth = 1.6; x.stroke(); x.lineTo(w, h); x.lineTo(0, h); x.closePath();
+    const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, col + "44"); g.addColorStop(1, col + "00"); x.fillStyle = g; x.fill();
+  }
+}
+
+async function tick() {
+  let data; try { data = await (await fetch("api/nodes", { cache: "no-store" })).json(); } catch { return; }
+  const tb = $("#tb");
+  if (!data.nodes.length) { tb.innerHTML = '<tr><td colspan="10" class="empty">No nodes configured</td></tr>'; return; }
+  if ($(".empty", tb)) tb.innerHTML = "";
+  let on = 0, rx = 0, tx = 0, traf = 0;
+  for (const n of data.nodes) {
+    if (!rows.has(n.id)) { makeRow(n); cardsMap.set(n.id, makeCard(n)); }
+    const { tr, det } = rows.get(n.id), live = n.online && n.mem_total !== undefined;
+    const card = cardsMap.get(n.id), rgs = card.querySelectorAll(".rg");
+    card.classList.toggle("off", !n.online);
+    $(".cu", card).textContent = live ? dur(n.uptime) : (n.last_seen ? "Offline" : "Waiting…");
+    setRing(rgs[0], n.cpu, live);
+    setRing(rgs[1], n.mem_total ? n.mem_used / n.mem_total * 100 : 0, live);
+    setRing(rgs[2], n.disk_total ? n.disk_used / n.disk_total * 100 : 0, live);
+    $(".cr", card).textContent = live ? rate(n.rx_rate) : "–"; $(".ct", card).textContent = live ? rate(n.tx_rate) : "–";
+    tr.classList.toggle("off", !n.online);
+    $(".st", tr).textContent = n.online ? "Online" : "Offline";
+    if (n.online) { on++; rx += n.rx_rate || 0; tx += n.tx_rate || 0; }
+    traf += (n.period_rx || 0) + (n.period_tx || 0);
+    $(".h-up", tr).textContent = live ? dur(n.uptime) : "–";
+    $(".h-load", tr).textContent = live ? n.load[0].toFixed(2) : "–";
+    $(".nr", tr).textContent = live ? rate(n.rx_rate) : "–";
+    $(".nt", tr).textContent = live ? rate(n.tx_rate) : "–";
+    $(".pr", tr).textContent = n.period_rx !== undefined ? bytes(n.period_rx) : "–";
+    $(".pt", tr).textContent = n.period_tx !== undefined ? bytes(n.period_tx) : "–";
+    setBar($(".b-cpu", tr), n.cpu, live);
+    setBar($(".b-mem", tr), n.mem_total ? n.mem_used / n.mem_total * 100 : 0, live);
+    setBar($(".b-disk", tr), n.disk_total ? n.disk_used / n.disk_total * 100 : 0, live);
+    if (n.mem_total !== undefined) {
+      $(".d-core", det).textContent = n.ncpu; $(".d-mem", det).textContent = `${bytes(n.mem_used)} / ${bytes(n.mem_total)}`;
+      $(".d-disk", det).textContent = `${bytes(n.disk_used)} / ${bytes(n.disk_total)}`;
+      $(".d-swap", det).textContent = n.swap_total ? `${bytes(n.swap_used)} / ${bytes(n.swap_total)}` : "None";
+      $(".d-up", det).textContent = dur(n.uptime); $(".d-load", det).textContent = n.load.map(v => v.toFixed(2)).join(" / ");
+      $(".d-ps", det).textContent = n.period_start || "–";
+      $(".d-tr", det).textContent = bytes(n.total_rx); $(".d-tt", det).textContent = bytes(n.total_tx);
+      $(".d-pall", det).textContent = bytes(n.period_rx + n.period_tx);
+    }
+    if (n.online && series.has(n.id)) { const s = series.get(n.id); s.push([n.rx_rate, n.tx_rate]); if (s.length > 240) s.shift(); }
+    if (open.has(n.id)) draw(n.id);
+  }
+  $("#sOn").textContent = `${on} / ${data.nodes.length}`; $("#sRx").textContent = rate(rx); $("#sTx").textContent = rate(tx);
+  $("#sTraf").textContent = bytes(traf); $("#upd").textContent = new Date().toLocaleTimeString();
+}
+tick(); setInterval(tick, 3000);
+addEventListener("resize", () => open.forEach(draw));
+</script>
+</body>
+</html>
