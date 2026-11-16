@@ -71,9 +71,9 @@ th.c,td.c{text-align:center}
 @media (prefers-color-scheme: light){.bar span{color:#1b1f2e;text-shadow:0 0 3px rgba(255,255,255,.9)}}
 
 /* expandable detail row */
-tr.det td{padding:0;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02)}
+tr.det td{padding:0;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02);white-space:normal}
 tr.det .in{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) 2fr;gap:6px 24px;padding:14px 20px 16px;font-size:12.5px;color:var(--sub)}
-tr.det .in div b{color:var(--text);font-weight:600;margin-left:6px}
+tr.det .in div b{display:block;color:var(--text);font-weight:600;margin-top:1px;font-variant-numeric:tabular-nums}
 tr.det canvas{grid-row:span 3;grid-column:5;width:100%;height:72px}
 tr.det[hidden]{display:none}
 
