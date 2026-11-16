@@ -68,8 +68,9 @@ class Ledger:
             pass
         self.dirty_since = 0
 
-    def update(self, boot_id, rx, tx):
+    def update(self, boot_id, rx, tx, uptime=0):
         s = self.s
+        first_boot = s["boot_id"]
         if s["boot_id"] is None:
             drx = dtx = 0  # first run ever: start counting from now
         elif boot_id == s["boot_id"] and rx >= s["rx"] and tx >= s["tx"]:
@@ -82,6 +83,18 @@ class Ledger:
         s.update(boot_id=boot_id, rx=rx, tx=tx)
         s["total_rx"] += drx; s["total_tx"] += dtx
         s["period_rx"] += drx; s["period_tx"] += dtx
+        # One-time seed: include traffic from before the client was installed (since host boot).
+        # Only valid if the ledger was started during the current boot.
+        if not s.get("seeded"):
+            if first_boot in (None, boot_id):
+                s["total_rx"] = max(s["total_rx"], rx)
+                s["total_tx"] = max(s["total_tx"], tx)
+                boot_day = datetime.date.fromtimestamp(time.time() - uptime).isoformat()
+                if boot_day >= s["period"]:
+                    s["period_rx"] = max(s["period_rx"], rx)
+                    s["period_tx"] = max(s["period_tx"], tx)
+            s["seeded"] = True
+            self.dirty_since = 1  # force save on this tick
         if not self.dirty_since:
             self.dirty_since = time.time()
         if time.time() - self.dirty_since > 10:
@@ -116,7 +129,7 @@ def build_report(prev, cur, ledger):
     prx = sum(v[0] for v in prev["net"].values())
     ptx = sum(v[1] for v in prev["net"].values())
     same = prev["boot_id"] == cur["boot_id"]
-    ledger.update(cur["boot_id"], rx, tx)
+    ledger.update(cur["boot_id"], rx, tx, cur.get("uptime", 0))
     L = ledger.s
     return {
         "uptime": cur["uptime"], "load": cur["load"], "ncpu": cur["ncpu"],
