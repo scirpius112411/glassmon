@@ -13,6 +13,38 @@ Shows CPU, RAM, disk, live network speed and **cumulative traffic that survives 
                                                 (stateless, in-memory)
 ```
 
+## Quick start: one-click manager
+
+Run as root on any machine (works like Hotaru's `status.sh`):
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/scirpius112411/glassmon/main/glassmon.sh)
+```
+
+```
+ ── Server ──────────     ── Client ──────────     ── Other ──────────
+  1) Install server         6) Install client         8) Status
+  2) Update server          7) Update client          9) Logs
+  3) Add node                                        10) Uninstall server
+  4) List nodes                                      11) Uninstall client
+  5) Delete node
+```
+
+Every action also works non-interactively:
+
+```bash
+glassmon.sh add-node "JP-1 Tokyo|JP"         # prints the install command for the new host
+glassmon.sh client-install https://STATUS.DOMAIN TOKEN
+glassmon.sh client-update                     # pulls client.py from your server
+glassmon.sh server-update                     # git pull; restarts only if the server code changed
+glassmon.sh list-nodes | del-node 2 | status | logs
+```
+
+Tip: save it as a command with
+`curl -fsSL https://raw.githubusercontent.com/scirpius112411/glassmon/main/glassmon.sh -o /usr/local/bin/glassmon && chmod 700 /usr/local/bin/glassmon`.
+Set `GLASSMON_PUBLIC_URL` in `/etc/glassmon/server.env` so `add-node` prints your real domain.
+The sections below describe the same steps manually.
+
 ## Repository layout
 
 | Path | What it is |
